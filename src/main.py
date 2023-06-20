@@ -1,30 +1,30 @@
-from urllib3 import disable_warnings
-from args_parsing import check_args, get_args
-from downloader import Downloader
+from argparse import ArgumentParser
+from typing import List
 
-
-def print_error(arg_index: int) -> None:
-    digit = arg_index % 10
-
-    s = 'ый'
-
-    if digit in [2, 6, 7, 8]:
-        s = 'ой'
-    if digit == 3:
-        s = 'ий'
-
-    print(f'Некорректный {arg_index}-{s} аргумент')
-
+from book import Book
+from book_parser import BookParser, NSULibBookParser
+from downloader import Downloader, ProgressPDFDownloader
 
 if __name__ == '__main__':
-    disable_warnings()
+    args_parser: ArgumentParser = ArgumentParser(
+        prog='NSU-Library-Parser',
+        description='The program downloads all given books (page by page) from NSU e-library and converts them to pdf. '
+                    'It stores downloaded books to directory "books. '
+                    'Before downloading all books, program clears this directory (if the directory existed).',
+    )
 
-    incorrect_arg_index = check_args()
+    args_parser.add_argument('urls', metavar='link', type=str, nargs='+', help='link to the book')
 
-    if incorrect_arg_index:
-        print_error(arg_index=incorrect_arg_index)
-        exit(0)
+    urls: List[str] = args_parser.parse_args().urls
+    parser: BookParser = NSULibBookParser()
+    books: List[Book] = []
 
-    downloader = Downloader()
+    print('Preparing books for downloading ...\n')
+    for url in urls:
+        book = parser.parse(url=url)
+        if book is not None:
+            print(f'Book "{book}" is prepared for downloading\n')
+            books.append(book)
 
-    downloader.download(urls=get_args())
+    downloader: Downloader = ProgressPDFDownloader()
+    downloader.download(books=books)
